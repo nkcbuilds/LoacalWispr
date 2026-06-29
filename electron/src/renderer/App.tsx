@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Mic, Settings, Wifi, WifiOff } from 'lucide-react';
 import type { BackendStatus, ModelInfo, RecordingState } from '@shared/types';
 import { api } from '@/lib/api';
+import { useBackendWebSocket } from '@/hooks/useBackendWebSocket';
 import { StatusBar } from '@/components/StatusBar';
 import { RecordingArea } from '@/components/RecordingArea';
 import { ModelSelector } from '@/components/ModelSelector';
@@ -12,15 +13,47 @@ export default function App() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('starting');
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [models, setModels] = useState<ModelInfo[]>([]);
-  const [selectedModel, setSelectedModel] = useState('small');
+  const [selectedModel, setSelectedModel] = useState('small.en');
   const [backendVersion, setBackendVersion] = useState<string | null>(null);
+  const [lastTranscription, setLastTranscription] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const loadModels = useCallback(async (): Promise<void> => {
+    try {
+      const list = await api.models();
+      setModels(list);
+    } catch {
+      // backend may still be starting
+    }
+  }, []);
+
+  const checkHealth = useCallback(async (): Promise<void> => {
+    try {
+      const health = await api.health();
+      setBackendStatus('ready');
+      setBackendVersion(health.version);
+      if (health.current_model) setSelectedModel(health.current_model);
+      setErrorMessage(null);
+      await loadModels();
+    } catch {
+      setBackendStatus('offline');
+    }
+  }, [loadModels]);
+
+  useBackendWebSocket({
+    onStateChange: setRecordingState,
+    onTranscriptionComplete: setLastTranscription,
+    onError: setErrorMessage,
+    onModelChanged: setSelectedModel,
+    onModelDownloaded: () => void loadModels(),
+  });
 
   useEffect(() => {
     const unsubStatus = window.wispr.onBackendStatus((event) => {
       if (event.status === 'ready') {
         setBackendStatus('ready');
         setBackendVersion(event.health?.version ?? null);
+        if (event.health?.current_model) setSelectedModel(event.health.current_model);
         setErrorMessage(null);
         void loadModels();
       } else if (event.status === 'error') {
@@ -33,8 +66,9 @@ export default function App() {
       setRecordingState(state as RecordingState);
     });
 
-    const unsubHotkey = window.wispr.onHotkeyToggle(() => {
-      setRecordingState((prev) => (prev === 'recording' ? 'idle' : 'recording'));
+    const unsubTranscription = window.wispr.onTranscriptionComplete((text) => {
+      setLastTranscription(text);
+      setRecordingState('idle');
     });
 
     void checkHealth();
@@ -42,29 +76,9 @@ export default function App() {
     return () => {
       unsubStatus();
       unsubRecording();
-      unsubHotkey();
+      unsubTranscription();
     };
-  }, []);
-
-  async function checkHealth(): Promise<void> {
-    try {
-      const health = await api.health();
-      setBackendStatus('ready');
-      setBackendVersion(health.version);
-      await loadModels();
-    } catch {
-      setBackendStatus('offline');
-    }
-  }
-
-  async function loadModels(): Promise<void> {
-    try {
-      const list = await api.models();
-      setModels(list);
-    } catch {
-      // Models endpoint may not be ready yet during scaffold phase
-    }
-  }
+  }, [checkHealth, loadModels]);
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -101,11 +115,19 @@ export default function App() {
           </div>
         )}
 
+        {lastTranscription && (
+          <div className="rounded-lg border border-border bg-card/50 px-4 py-3 text-sm">
+            <span className="text-muted-foreground">Last transcription: </span>
+            <span className="text-foreground">{lastTranscription}</span>
+          </div>
+        )}
+
         <ModelSelector
           models={models}
           selectedModel={selectedModel}
           onSelectModel={setSelectedModel}
-          disabled={backendStatus !== 'ready'}
+          onModelsChanged={() => void loadModels()}
+          disabled={backendStatus !== 'ready' || recordingState !== 'idle'}
         />
 
         <RecordingArea state={recordingState} />

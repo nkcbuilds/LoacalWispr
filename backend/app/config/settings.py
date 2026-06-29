@@ -11,8 +11,11 @@ class Settings(BaseSettings):
     cache_dir: Path = Path.home() / ".cache" / "wisprlocal"
     models_dir: Path | None = None
     bin_dir: Path | None = None
-    default_model: str = "small"
+    default_model: str = "small.en"
     sample_rate: int = 16000
+    transcription_provider: str = "faster_whisper"
+    compute_type: str = "float16"
+    device: str = "auto"
 
     def model_post_init(self, __context: object) -> None:
         if self.models_dir is None:

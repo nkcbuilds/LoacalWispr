@@ -4,6 +4,8 @@ export interface HealthResponse {
   status: string;
   version: string;
   backend: string;
+  provider?: string;
+  current_model?: string;
 }
 
 export interface BackendStatusEvent {
@@ -34,6 +36,12 @@ const api = {
     const handler = () => callback();
     ipcRenderer.on('hotkey:toggle-recording', handler);
     return () => ipcRenderer.removeListener('hotkey:toggle-recording', handler);
+  },
+
+  onTranscriptionComplete: (callback: (text: string) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, text: string) => callback(text);
+    ipcRenderer.on('transcription:complete', handler);
+    return () => ipcRenderer.removeListener('transcription:complete', handler);
   },
 };
 
