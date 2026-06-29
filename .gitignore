@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-electron/
+out/
+build/
+release/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+*.egg
+
+# WisprLocal runtime cache (downloaded models & binaries)
+.cache/
+
+# whisper.cpp binaries and model weights (downloaded at runtime)
+backend/whisper-bin/*
+!backend/whisper-bin/.gitkeep
+*.gguf
+*.bin
+*.exe
+
+# IDE & editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & secrets
+*.log
+npm-debug.log*
+.env
+.env.local
+.env.*.local
+
+# Test & coverage
+coverage/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Cursor / agent workspace artifacts (not project source)
+terminals/
+mcps/
+.agent/
+.cursor/

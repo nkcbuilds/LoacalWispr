@@ -1,0 +1,14 @@
+{
+  "name": "wisprlocal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Privacy-first local voice-to-text for Windows",
+  "workspaces": [
+    "electron"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=electron",
+    "build": "npm run build --workspace=electron",
+    "backend": "cd backend && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8741"
+  }
+}
